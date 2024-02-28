@@ -2541,17 +2541,23 @@ function Reset-DaPSSDLCEnvironment {
     $TravellerDatabaseRefresh   = Receive-Job -Name "Refresh#$($Env.Database)" -AutoRemoveJob -Wait
     $SILTDatabaseRefresh        = Receive-Job -Name "Refresh#$($EnvILTSILT.Database)" -AutoRemoveJob -Wait
 
-    switch ($Env.BackupType) {
-        Live {
-            $FULLBackup = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'FULL'} | Select-Object -Last 1
-            $DIFFBackup = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'DIFF'} | Select-Object -Last 1
-            $TRNBackups = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'TRN'}
-            $LastBackup = $TravellerDatabaseRefresh | Select-Object -Last 1
-         }
-        Default {}
+    if ($($Env.BackupType) -eq 'Live') {
+
+        $FULLBackup = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'FULL'} | Select-Object -Last 1
+        $DIFFBackup = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'DIFF'} | Select-Object -Last 1
+        $TRNBackups = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'TRN'}
+        $LastBackup = $TravellerDatabaseRefresh | Select-Object -Last 1
     }
 
-
+    # switch ($Env.BackupType) {
+    #     Live {
+    #         $FULLBackup = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'FULL'} | Select-Object -Last 1
+    #         $DIFFBackup = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'DIFF'} | Select-Object -Last 1
+    #         $TRNBackups = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'TRN'}
+    #         $LastBackup = $TravellerDatabaseRefresh | Select-Object -Last 1
+    #      }
+    #     Default {}
+    # }
 
     #endregion
 
@@ -2570,7 +2576,6 @@ function Reset-DaPSSDLCEnvironment {
                 New-AdaptiveTextBlock -Text "$($Env.Database)" -Subtle -HorizontalAlignment Center -Color Good -Size Large -Spacing None
 
             }
-
         }
     }-Action {
 
@@ -2695,7 +2700,6 @@ function Reset-DaPSSDLCEnvironment {
 
 
                 }
-
                 New-AdaptiveAction -Title "SILT Refresh Summary" -Body   {
                     New-AdaptiveTextBlock -Text "Database Restore Summary - $($SILTDatabaseRefresh.Database)" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
                     New-AdaptiveFactSet {
@@ -2723,7 +2727,128 @@ function Reset-DaPSSDLCEnvironment {
                 }
 
              }
-            Masked {}
+            Masked {
+
+                New-AdaptiveAction -Title "Refresh Process" -Body   {
+                    New-AdaptiveTextBlock -Text "Environment Refresh Summary" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title '01.' -Value "Check/Remove Replication"
+                        New-AdaptiveFact -Title '02.' -Value "Check/Remove Database Snapshots"
+                        New-AdaptiveFact -Title '03.' -Value "Disable Owner Payment job: $($Env.OwnerPaymentJob)"
+                        New-AdaptiveFact -Title '04.' -Value "Disable CDC"
+                        New-AdaptiveFact -Title '05.' -Value "Refresh $($Env.Database) database. Runtime: $($TravellerDatabaseRefresh.DatabaseRestoreTime)"
+                        New-AdaptiveFact -Title '05.' -Value "Refresh $($Env.ILTDatabaseSILT) database. Runtime: $($SILTDatabaseRefresh.DatabaseRestoreTime)"
+                        New-AdaptiveFact -Title '06.' -Value "Enable Change Tracking"
+                        New-AdaptiveFact -Title '07.' -Value "Drop/Add User Accounts"
+                        New-AdaptiveFact -Title '08.' -Value "Enable CDC"
+                        New-AdaptiveFact -Title '09.' -Value "Update $($Env.Database) Traveller Application Settings"
+                        # New-AdaptiveFact -Title '10.' -Value "Refresh $($Env.ILTDatabase) database"
+                        New-AdaptiveFact -Title '11.' -Value "Create Traveller Publication: [$($Env.PublicationName)]"
+                        New-AdaptiveFact -Title '12.' -Value "Setup Replication"
+                        New-AdaptiveFact -Title '11.' -Value "Create Traveller Publication: [$($Env.TravellerPublicationILTSupplierExtras)]"
+                        New-AdaptiveFact -Title '11.' -Value "Create SILT Publication: [$($Env.PublicationNameSILT)]"
+                        New-AdaptiveFact -Title '13.' -Value "Apply Indexes to the $($Env.ILTDatabaseSILT) database"
+                        New-AdaptiveFact -Title '13.' -Value "Backup SILT Database - $($Env.ILTDatabaseSILT). Runtime: $($BackupSummary.Duration)"
+                        New-AdaptiveFact -Title '13.' -Value "Restore Database [$($Env.ILTDatabaseSILT)] to [$($Env.ILTDatabase)]. Runtime: $($RestoreSummary.DatabaseRestoreTime)"
+                        New-AdaptiveFact -Title '13.' -Value "Initialize Replication"
+                        New-AdaptiveFact -Title '14.' -Value "Check Traveller Discount Engine has loaded"
+                        New-AdaptiveFact -Title '14.' -Value "Complete Runtime: $($DurationEnvironmentRefresh.Duration.ToString("hh\:mm\:ss"))"
+
+                    } -Separator Medium
+                }
+                New-AdaptiveAction -Title "Refresh Items" -Body   {
+
+                    New-AdaptiveTextBlock -Text "Databases" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Traveller' -Value "$($Env.Database)"
+                        New-AdaptiveFact -Title 'SILT' -Value "$($Env.ILTDatabaseSILT)"
+                        New-AdaptiveFact -Title "ILT" -Value "$($Env.ILTDatabase)"
+
+                    } -Separator Medium
+
+                    New-AdaptiveTextBlock -Text "Replication" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Traveller Publication 1' -Value $Env.TravellerPublicationILT
+                        New-AdaptiveFact -Title 'Traveller Publication 2' -Value $Env.TravellerPublicationILTSupplierExtras
+                        New-AdaptiveFact -Title 'SILT Publication' -Value $Env.PublicationNameSILT
+
+
+                    } -Separator Medium
+
+                    New-AdaptiveTextBlock -Text "Traveller Restore Scripts" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Separator Default
+                    New-AdaptiveLineBreak
+                    New-AdaptiveTextBlock  -Text $($TravellerDatabaseRefresh.Script) -Wrap
+
+                    New-AdaptiveTextBlock -Text "SILT Restore Script" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Separator Default
+                    New-AdaptiveLineBreak
+                    New-AdaptiveTextBlock  -Text $($SILTDatabaseRefresh.Script) -Wrap
+
+                }
+                New-AdaptiveAction -Title "Traveller Refresh Summary" -Body   {
+                    New-AdaptiveTextBlock -Text "Database Restore Summary - $($TravellerDatabaseRefresh.Database)" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Duration' -Value "$($TravellerDatabaseRefresh.DatabaseRestoreTime)"
+                        New-AdaptiveFact -Title 'SQL Instance' -Value "$($TravellerDatabaseRefresh.SQLInstance)"
+                        New-AdaptiveFact -Title "Server" -Value "$($TravellerDatabaseRefresh.ComputerName)"
+
+                    } -Separator Medium
+
+                    New-AdaptiveTextBlock -Text "Full Backup Details" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Full Backup' -Value $(($TravellerDatabaseRefresh.BackupFile | Select-String -Pattern '[^\\]*\.(bak|trn|diff|DIFF)').Matches.Value)
+                        New-AdaptiveFact -Title 'Size' -Value "$($TravellerDatabaseRefresh.BackupSize)"
+                        New-AdaptiveFact -Title 'Size Compressed' -Value "$($TravellerDatabaseRefresh.CompressedBackupSize)"
+                        New-AdaptiveFact -Title 'Restore Time' -Value "$($TravellerDatabaseRefresh.FileRestoreTime)"
+
+
+                    } -Separator Medium
+
+                    New-AdaptiveTextBlock -Text "Database Files" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Traveller_AddData' -Value $Env.Traveller_AddData
+                        New-AdaptiveFact -Title 'Traveller_Data' -Value $Env.Traveller_Data
+                        New-AdaptiveFact -Title 'Traveller_Data2' -Value $Env.Traveller_Data2
+                        New-AdaptiveFact -Title 'Traveller_Log' -Value $Env.Traveller_Log
+                        New-AdaptiveFact -Title 'Traveller_Log2' -Value $Env.Traveller_Log2
+                        New-AdaptiveFact -Title 'Traveller_Log3' -Value $Env.Traveller_Log3
+
+
+                    } -Separator Medium
+
+
+                }
+                New-AdaptiveAction -Title "SILT Refresh Summary" -Body   {
+                    New-AdaptiveTextBlock -Text "Database Restore Summary - $($SILTDatabaseRefresh.Database)" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Duration' -Value "$($SILTDatabaseRefresh.DatabaseRestoreTime)"
+                        New-AdaptiveFact -Title 'SQL Instance' -Value "$($SILTDatabaseRefresh.SQLInstance)"
+                        New-AdaptiveFact -Title "Server" -Value "$($Env.Server)"
+
+                    } -Separator Medium
+                    New-AdaptiveTextBlock -Text "Refresh Parameters" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Backup File' -Value $(($SILTDatabaseRefresh.BackupFile | Select-String -Pattern '[^\\]*\.(bak|trn|diff|DIFF)').Matches.Value)
+                        New-AdaptiveFact -Title 'Backup Size' -Value "$($SILTDatabaseRefresh.BackupSize)"
+                        New-AdaptiveFact -Title 'Data Directory' -Value "$($EnvILTSILT.DataDirectory)"
+                        New-AdaptiveFact -Title 'Log Directory' -Value "$($EnvILTSILT.LOGDirectory)"
+                        New-AdaptiveFact -Title 'FileSuffix' -Value "$($EnvILTSILT.Suffix)"
+
+
+                    } -Separator Medium
+                    New-AdaptiveTextBlock -Text "File List" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Spacing None -Separator Default
+                        New-AdaptiveTable -DataTable $Files -Size Small -Spacing None -HeaderColor Good
+
+
+                }
+            }
         }
 
     }
