@@ -65,11 +65,11 @@ function Reset-DaPSSDLCEnvironment {
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
 
-    $TimerEnvironmentRefresh = 'EnvironmentRefresh'
-    $RegexDatabaseName      = '(?<=\[)[^]]+(?=\])' # Extracts Database Name Between brackets [] from the Restore SQL command
-    $RegexBackupFile        = '[^\\]*\.(bak|trn|diff|DIFF)'
-    $TeamsSendInterval      = 9
-    $global:CountRestore    = 0
+    $TimerEnvironmentRefresh    = 'EnvironmentRefresh'
+    $RegexDatabaseName          = '(?<=\[)[^]]+(?=\])' # Extracts Database Name Between brackets [] from the Restore SQL command
+    $RegexBackupFile            = '[^\\]*\.(bak|trn|diff|DIFF)'
+    $TeamsSendInterval          = 9
+    $global:CountRestore        = 0
 
     $URI = "https://awazecom.webhook.office.com/webhookb2/$($Teams.TeamsGUID1_Refresh_Environment)/IncomingWebhook/$($Teams.TeamsGUID2_Refresh_Environment)"
 
@@ -275,12 +275,7 @@ function Reset-DaPSSDLCEnvironment {
 
                 }
                 catch {
-                    # $Err1 = $error[0]
-                    # $Err2 = $_
-                    # Write-DaLogEvent $logfile $Err1
-                    # Write-DaLogEvent $logfile $Err2
-                    # Write-DaLogEvent $logfile $CapturedWarning
-                    # Write-Warning -Message $($_.Exception.Message)
+
                     Write-DaPSLogEvent "Error removing [$PublicationName] publication. Retrying...!!!" @Logging
                     Invoke-DbaQuery -SqlInstance $SQLInstance -Database $TravellerDatabase -Query $DropReplication -Verbose
 
@@ -379,7 +374,7 @@ function Reset-DaPSSDLCEnvironment {
 "@
 
                 $RestoreStatus  = Invoke-DbaQuery -SqlInstance "$($ArgumentList.SQLInstance)" -Database Master -Query $SQLMonitorScript -As PSObject
-                # $RestoreStatus  = Invoke-DbaQuery -SqlInstance "$SQLInstance" -Database Master -Query $SQLMonitorScript -As PSObject
+
                 # ---------------------------------------------- For Each Record Returned Output the Current Progress ---------------------------------------------- #
 
                 $RestoreStatusResults = @()
@@ -390,24 +385,17 @@ function Reset-DaPSSDLCEnvironment {
                         $Database   = ([regex]::Matches("$($_.SQL_Statement)" , $($ArgumentList.RegexDatabaseName))).Value
                         $File       = ([regex]::Matches("$($_.SQL_Statement)" , $($ArgumentList.RegexBackupFile))).Value
 
-                        # $Database   = ([regex]::Matches("$($_.SQL_Statement)" , '(?<=\[)[^]]+(?=\])')).Value
-                        # $File       = ([regex]::Matches("$($_.SQL_Statement)" , '[^\\]*\.(bak|trn|diff|DIFF)')).Value
-
                         $StatusSnapshot = [PSCustomObject]@{
-                            # DateTime        = $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
+
                             Database        = $Database
                             PercentComplete = "$($_.Percentage_Complete)%"
-                            # Elapsed         = "$($_.Elapsed_Min)"
-                            #'ETA(Hours)'    = "$($_.Estimated_Hours)"
                             BackupFile      = $File
                         }
+
                         $RestoreStatusResults += $StatusSnapshot
 
-                        # Write-Host "[$Database] Restore Progress: $($_.Percentage_Complete)% | File: $File"
                     }
                 }
-
-                # $RestoreStatusResults | Format-Table
 
                 $RestoreStatusResults | ForEach-Object {
 
@@ -546,8 +534,7 @@ function Reset-DaPSSDLCEnvironment {
 
         }
         process {
-            # Get the current replication setup from the SILT
-            # $GetCurrentReplicationSetup = "exec sp_replmonitorhelpsubscription @publisher ='$SQLInstance', @publication_type =  0"
+
             $GetCurrentReplicationSetup = "exec sp_replmonitorhelppublication @publisher ='$SQLInstance', @publication_type =  0"
             $ReplicationDetails = Invoke-DbaQuery -SqlInstance $SQLInstance -Database distribution -Query $GetCurrentReplicationSetup -As PSObject |
             Select-Object publisher_db, publication #, subscriber
@@ -696,10 +683,6 @@ function Reset-DaPSSDLCEnvironment {
         do {
 
             $PendingCommands = Invoke-DbaQuery -SqlInstance $SQLInstance -Database distribution -Query $GetPendingCommands -Verbose
-
-            # $Mins       = $([timespan]::fromseconds($PendingCommands.estimatedprocesstime).Minutes)
-            # $Seconds    = $([timespan]::fromseconds($PendingCommands.estimatedprocesstime).Seconds)
-            # Write-DaPSLogEvent "[$Server] - $($PendingCommands.pendingcmdcount) pending commands in the $PublicationName publication, ETA = $Mins Mins $Seconds Seconds" -LogFile $logfile
 
             $CurrentStatus = Invoke-DbaQuery -SqlInstance $SQLInstance -Database distribution -Query $ReplicationStatus -Verbose # -As PSObject
             Write-DaPSLogEvent "$($CurrentStatus.minutes)mins - $($CurrentStatus.comments)" @Logging
@@ -1125,17 +1108,17 @@ function Reset-DaPSSDLCEnvironment {
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #region Disable SQL/AD Accounts
 
-    # $AccountsAccess = ($AllUserAccounts | Select-Object -Unique User | Where-Object {$_ -notmatch 'VRUKL'} ).User
+    $AccountsAccess = ($AllUserAccounts | Select-Object -Unique User | Where-Object {$_ -notmatch 'VRUKL'} ).User
 
-    # $AccountsAccess | ForEach-Object {
+    $AccountsAccess | ForEach-Object {
 
-    #     Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -DenyLogin
-    #     Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -Disable
-    # }
+        Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -DenyLogin
+        Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -Disable
+    }
 
-    # Write-DaPSLogEvent  "All Accounts Disbaled" @Logging
+    Write-DaPSLogEvent  "All Accounts Disabled" @Logging
 
-    # Get-DbaLogin -SqlInstance $SQLInstance | Where-Object {$_.Name -in $AccountsAccess}  | Select-Object Name, Hasaccess, IsDisabled
+    Get-DbaLogin -SqlInstance $SQLInstance | Where-Object {$_.Name -in $AccountsAccess}  | Select-Object Name, Hasaccess, IsDisabled
 
     #endregion
 
@@ -1219,8 +1202,6 @@ function Reset-DaPSSDLCEnvironment {
                 DestinationFileSuffix       = $EnvILTSILT.Suffix
                 WithReplace                 = $true
                 ErrorAction                 = 'Stop'
-                WarningAction               = 'Stop'
-                WarningVariable             = 'RefreshWarning'
 
             }
 
@@ -1312,8 +1293,6 @@ function Reset-DaPSSDLCEnvironment {
                 DestinationFileSuffix       = $EnvILTSILT.Suffix
                 WithReplace                 = $true
                 ErrorAction                 = 'Stop'
-                WarningAction               = 'Stop'
-                WarningVariable             = 'RefreshWarning'
 
             }
 
@@ -1364,9 +1343,6 @@ function Reset-DaPSSDLCEnvironment {
             }
 
             #endregion
-
-
-
 
         }
 
@@ -1439,8 +1415,6 @@ function Reset-DaPSSDLCEnvironment {
                 FileMapping                 = $FileStructure
                 WithReplace                 = $true
                 ErrorAction                 = 'Stop'
-                # WarningAction               = 'Stop'
-                # WarningVariable             = 'RefreshWarning'
                 ErrorVariable               = 'RefreshWarning'
 
             }
@@ -1449,8 +1423,6 @@ function Reset-DaPSSDLCEnvironment {
 
             $RestoreSummaryTraveller = $Backups | Restore-DbaDatabase @RestoreParameters
             $RestoreSummaryTraveller
-
-            #Write-DaPSLogEvent "[$Database] Database Refresh: Checkpoint" @Logging | Out-Null
 
             switch ($Env.BackupType) {
                 Masked {
@@ -1615,20 +1587,16 @@ function Reset-DaPSSDLCEnvironment {
 
             #endregion
 
-            Write-DaLogEvent $logfile "Database restore failed.!!!!!" | Out-Null
-
-            break
-
             Write-DaLogEvent $logfile "Database restore failed. Retrying...!!!!!" | Out-Null
 
             $RestoreParameters = @{
+
                 SqlInstance                 = $SQLInstance
                 DatabaseName                = $Database
                 FileMapping                 = $FileStructure
                 WithReplace                 = $true
                 ErrorAction                 = 'Stop'
-                WarningAction               = 'Stop'
-                WarningVariable             = 'RefreshWarning'
+
             }
 
             $RestoreSummaryTraveller = $Backups | Restore-DbaDatabase @RestoreParameters
@@ -1918,6 +1886,7 @@ function Reset-DaPSSDLCEnvironment {
     #region Set Traveller Configuration
 
     Write-DaPSLogEvent "****************Traveller Configuration Started****************" @Logging
+    Write-DaPSLogEvent "Traveller Config Script Folder - $($Env.TravellerConfigScripts)" @Logging
 
     if ($TravellerConfigScripts) {
 
@@ -2082,6 +2051,22 @@ function Reset-DaPSSDLCEnvironment {
     #endregion
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #                                                               ENABLE SQL/AD ACCOUNTS                                                               #
+    # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #region Enable SQL/AD Accounts
+
+    $AccountsAccess = ($AllUserAccounts | Select-Object -Unique User | Where-Object {$_ -notmatch 'VRUKL'} ).User
+
+    $AccountsAccess | ForEach-Object {
+
+        Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -GrantLogin
+        Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -Enable
+    }
+    Write-DaPSLogEvent  "All Accounts Enabled" @Logging
+
+    #endregion
+
+    # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                        CREATE PUBLICATION - SUPPLIER EXTRAS                                                        #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #region Create Publication - Supplier Extras
@@ -2091,7 +2076,7 @@ function Reset-DaPSSDLCEnvironment {
 
     Start-Sleep 15
 
-    $SnapshotAgentJobSupplier = Get-DbaAgentJob -SqlInstance $SQLInstance -Category 'REPL-Snapshot' | Where-Object { $_.Name -match $Database } | Where-Object { $_.Name -match "Supp" } | Start-DbaAgentJob -Verbose
+    $SnapshotAgentJobSupplier = Get-DbaAgentJob -SqlInstance $SQLInstance -Category 'REPL-Snapshot' | Where-Object { $_.Name -match $Database } | Sort-Object -Property 'CreateDate' -Descending | Select-Object -First 1 | Start-DbaAgentJob -Verbose
     Write-DaPSLogEvent "Snapshot Agent Started - [$($SnapshotAgentJobSupplier.Name)]" @Logging
 
     Start-Sleep 60
@@ -2103,7 +2088,7 @@ function Reset-DaPSSDLCEnvironment {
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #region Create View in the SILT Database
 
-    $VwGetFundingForDiscountAll = Find-DbaView -SqlInstance $SQLInstance -Pattern $Params.ILTView -Database $($EnvILTSILT.Database)
+    $VwGetFundingForDiscountAll = Find-DbaView -SqlInstance $SQLInstance -Pattern $Params.ILTView -Database $(v)
     if (!$VwGetFundingForDiscountAll) {
 
         Invoke-DbaQuery -SqlInstance $SQLInstance -File $ViewCreateScript -Database $($EnvILTSILT.Database) -Verbose
@@ -2426,28 +2411,19 @@ function Reset-DaPSSDLCEnvironment {
     #endregion
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
-    #                                                               ENABLE SQL/AD ACCOUNTS                                                               #
-    # -------------------------------------------------------------------------------------------------------------------------------------------------- #
-    #region Enable SQL/AD Accounts
-
-    $AccountsAccess = ($AllUserAccounts | Select-Object -Unique User | Where-Object {$_ -notmatch 'VRUKL'} ).User
-
-    $AccountsAccess | ForEach-Object {
-
-        Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -GrantLogin
-        Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -Enable
-    }
-    Write-DaPSLogEvent  "All Accounts Enabled" @Logging
-
-    #endregion
-
-    # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                              ENABLE OWNER PAYMENT JOB                                                              #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #region Enable Owner Payment Job
 
-    Set-DbaAgentJob -SqlInstance $SQLInstance -Job $env.OwnerPaymentJob -Enabled
-    Write-DaPSLogEvent "[$($Env.OwnerPaymentJob)] SQL job has been enabled" @Logging
+    if ($env.OwnerPaymentJob) {
+        
+        Set-DbaAgentJob -SqlInstance $SQLInstance -Job $env.OwnerPaymentJob -Enabled
+        Write-DaPSLogEvent "[$($Env.OwnerPaymentJob)] SQL job has been enabled" @Logging
 
+    }
+    
+    #endregion
+    
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                              UPDATE DATABASE SETTINGS                                                              #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
@@ -2541,17 +2517,13 @@ function Reset-DaPSSDLCEnvironment {
     $TravellerDatabaseRefresh   = Receive-Job -Name "Refresh#$($Env.Database)" -AutoRemoveJob -Wait
     $SILTDatabaseRefresh        = Receive-Job -Name "Refresh#$($EnvILTSILT.Database)" -AutoRemoveJob -Wait
 
-    switch ($Env.BackupType) {
-        Live {
-            $FULLBackup = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'FULL'} | Select-Object -Last 1
-            $DIFFBackup = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'DIFF'} | Select-Object -Last 1
-            $TRNBackups = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'TRN'}
-            $LastBackup = $TravellerDatabaseRefresh | Select-Object -Last 1
-         }
-        Default {}
+    if ($($Env.BackupType) -eq 'Live') {
+
+        $FULLBackup = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'FULL'} | Select-Object -Last 1
+        $DIFFBackup = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'DIFF'} | Select-Object -Last 1
+        $TRNBackups = $TravellerDatabaseRefresh | Where-Object {$_.BackupFile -match 'TRN'}
+        $LastBackup = $TravellerDatabaseRefresh | Select-Object -Last 1
     }
-
-
 
     #endregion
 
@@ -2570,7 +2542,6 @@ function Reset-DaPSSDLCEnvironment {
                 New-AdaptiveTextBlock -Text "$($Env.Database)" -Subtle -HorizontalAlignment Center -Color Good -Size Large -Spacing None
 
             }
-
         }
     }-Action {
 
@@ -2622,6 +2593,20 @@ function Reset-DaPSSDLCEnvironment {
                         New-AdaptiveFact -Title 'Traveller Publication 1' -Value $Env.TravellerPublicationILT
                         New-AdaptiveFact -Title 'Traveller Publication 2' -Value $Env.TravellerPublicationILTSupplierExtras
                         New-AdaptiveFact -Title 'SILT Publication' -Value $Env.PublicationNameSILT
+
+
+                    } -Separator Medium
+
+                    New-AdaptiveTextBlock -Text "Folder Locations" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Root Refresh Files' -Value $Params.RefreshFilesFolder
+                        New-AdaptiveFact -Title 'Replication Live' -Value $Params.'Folder-ReplicationScriptsLive'
+                        New-AdaptiveFact -Title 'Replication SDLC' -Value $FolderReplicationScriptsSDLC
+                        New-AdaptiveFact -Title 'Traveller Config' -Value $Env.TravellerConfigScripts
+                        New-AdaptiveFact -Title 'Traveller Masked' -Value $Params.'BackUpFolder-Masked-Traveller'
+                        New-AdaptiveFact -Title 'AWS LogGroup' -Value $Params.LogGroup
+                        New-AdaptiveFact -Title 'AWS Stream' -Value $Logging.LogStreamName
 
 
                     } -Separator Medium
@@ -2695,7 +2680,6 @@ function Reset-DaPSSDLCEnvironment {
 
 
                 }
-
                 New-AdaptiveAction -Title "SILT Refresh Summary" -Body   {
                     New-AdaptiveTextBlock -Text "Database Restore Summary - $($SILTDatabaseRefresh.Database)" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
                     New-AdaptiveFactSet {
@@ -2721,9 +2705,151 @@ function Reset-DaPSSDLCEnvironment {
 
 
                 }
+                New-AdaptiveAction -Title "Accounts" -Body {
+
+                    New-AdaptiveTextBlock -Text "Account Summary" -Weight Bolder -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveLineBreak
+                    foreach ($Account in $AccountsAppliedTraveller) {
+
+                        New-AdaptiveRichTextBlock -Text "$Account" -Weight Lighter -Spacing None
+
+                    }
+
+                }
 
              }
-            Masked {}
+            Masked {
+
+                New-AdaptiveAction -Title "Refresh Process" -Body   {
+                    New-AdaptiveTextBlock -Text "Environment Refresh Summary" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title '01.' -Value "Check/Remove Replication"
+                        New-AdaptiveFact -Title '02.' -Value "Check/Remove Database Snapshots"
+                        New-AdaptiveFact -Title '03.' -Value "Disable Owner Payment job: $($Env.OwnerPaymentJob)"
+                        New-AdaptiveFact -Title '04.' -Value "Disable CDC"
+                        New-AdaptiveFact -Title '05.' -Value "Refresh $($Env.Database) database. Runtime: $($TravellerDatabaseRefresh.DatabaseRestoreTime)"
+                        New-AdaptiveFact -Title '05.' -Value "Refresh $($Env.ILTDatabaseSILT) database. Runtime: $($SILTDatabaseRefresh.DatabaseRestoreTime)"
+                        New-AdaptiveFact -Title '06.' -Value "Enable Change Tracking"
+                        New-AdaptiveFact -Title '07.' -Value "Drop/Add User Accounts"
+                        New-AdaptiveFact -Title '08.' -Value "Enable CDC"
+                        New-AdaptiveFact -Title '09.' -Value "Update $($Env.Database) Traveller Application Settings"
+                        New-AdaptiveFact -Title '10.' -Value "Create Traveller Publication: [$($Env.PublicationName)]"
+                        New-AdaptiveFact -Title '11.' -Value "Setup Replication"
+                        New-AdaptiveFact -Title '12.' -Value "Create Traveller Publication: [$($Env.TravellerPublicationILTSupplierExtras)]"
+                        New-AdaptiveFact -Title '13.' -Value "Create SILT Publication: [$($Env.PublicationNameSILT)]"
+                        New-AdaptiveFact -Title '14.' -Value "Apply Indexes to the $($Env.ILTDatabaseSILT) database"
+                        New-AdaptiveFact -Title '15.' -Value "Backup SILT Database - $($Env.ILTDatabaseSILT). Runtime: $($BackupSummary.Duration)"
+                        New-AdaptiveFact -Title '16.' -Value "Restore Database [$($Env.ILTDatabaseSILT)] to [$($Env.ILTDatabase)]. Runtime: $($RestoreSummary.DatabaseRestoreTime)"
+                        New-AdaptiveFact -Title '17.' -Value "Initialize Replication"
+                        New-AdaptiveFact -Title '18.' -Value "Check Traveller Discount Engine has loaded"
+                        New-AdaptiveFact -Title '19.' -Value "Complete Runtime: $($DurationEnvironmentRefresh.Duration.ToString("hh\:mm\:ss"))"
+
+                    } -Separator Medium
+                }
+                New-AdaptiveAction -Title "Refresh Items" -Body   {
+
+                    New-AdaptiveTextBlock -Text "Databases" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Traveller' -Value "$($Env.Database)"
+                        New-AdaptiveFact -Title 'SILT' -Value "$($Env.ILTDatabaseSILT)"
+                        New-AdaptiveFact -Title "ILT" -Value "$($Env.ILTDatabase)"
+
+                    } -Separator Medium
+
+                    New-AdaptiveTextBlock -Text "Replication" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Traveller Publication 1' -Value $Env.TravellerPublicationILT
+                        New-AdaptiveFact -Title 'Traveller Publication 2' -Value $Env.TravellerPublicationILTSupplierExtras
+                        New-AdaptiveFact -Title 'SILT Publication' -Value $Env.PublicationNameSILT
+
+
+                    } -Separator Medium
+
+                    New-AdaptiveTextBlock -Text "Traveller Restore Scripts" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Separator Default
+                    New-AdaptiveLineBreak
+                    New-AdaptiveTextBlock  -Text $($TravellerDatabaseRefresh.Script) -Wrap
+
+                    New-AdaptiveTextBlock -Text "SILT Restore Script" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Separator Default
+                    New-AdaptiveLineBreak
+                    New-AdaptiveTextBlock  -Text $($SILTDatabaseRefresh.Script) -Wrap
+
+                }
+                New-AdaptiveAction -Title "Traveller Refresh Summary" -Body   {
+                    New-AdaptiveTextBlock -Text "Database Restore Summary - $($TravellerDatabaseRefresh.Database)" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Duration' -Value "$($TravellerDatabaseRefresh.DatabaseRestoreTime)"
+                        New-AdaptiveFact -Title 'SQL Instance' -Value "$($TravellerDatabaseRefresh.SQLInstance)"
+                        New-AdaptiveFact -Title "Server" -Value "$($TravellerDatabaseRefresh.ComputerName)"
+
+                    } -Separator Medium
+
+                    New-AdaptiveTextBlock -Text "Full Backup Details" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Full Backup' -Value $(($TravellerDatabaseRefresh.BackupFile | Select-String -Pattern '[^\\]*\.(bak|trn|diff|DIFF)').Matches.Value)
+                        New-AdaptiveFact -Title 'Size' -Value "$($TravellerDatabaseRefresh.BackupSize)"
+                        New-AdaptiveFact -Title 'Size Compressed' -Value "$($TravellerDatabaseRefresh.CompressedBackupSize)"
+                        New-AdaptiveFact -Title 'Restore Time' -Value "$($TravellerDatabaseRefresh.FileRestoreTime)"
+
+
+                    } -Separator Medium
+
+                    New-AdaptiveTextBlock -Text "Database Files" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Traveller_AddData' -Value $Env.Traveller_AddData
+                        New-AdaptiveFact -Title 'Traveller_Data' -Value $Env.Traveller_Data
+                        New-AdaptiveFact -Title 'Traveller_Data2' -Value $Env.Traveller_Data2
+                        New-AdaptiveFact -Title 'Traveller_Log' -Value $Env.Traveller_Log
+                        New-AdaptiveFact -Title 'Traveller_Log2' -Value $Env.Traveller_Log2
+                        New-AdaptiveFact -Title 'Traveller_Log3' -Value $Env.Traveller_Log3
+
+
+                    } -Separator Medium
+
+
+                }
+                New-AdaptiveAction -Title "SILT Refresh Summary" -Body   {
+                    New-AdaptiveTextBlock -Text "Database Restore Summary - $($SILTDatabaseRefresh.Database)" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Duration' -Value "$($SILTDatabaseRefresh.DatabaseRestoreTime)"
+                        New-AdaptiveFact -Title 'SQL Instance' -Value "$($SILTDatabaseRefresh.SQLInstance)"
+                        New-AdaptiveFact -Title "Server" -Value "$($Env.Server)"
+
+                    } -Separator Medium
+                    New-AdaptiveTextBlock -Text "Refresh Parameters" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Backup File' -Value $(($SILTDatabaseRefresh.BackupFile | Select-String -Pattern '[^\\]*\.(bak|trn|diff|DIFF)').Matches.Value)
+                        New-AdaptiveFact -Title 'Backup Size' -Value "$($SILTDatabaseRefresh.BackupSize)"
+                        New-AdaptiveFact -Title 'Data Directory' -Value "$($EnvILTSILT.DataDirectory)"
+                        New-AdaptiveFact -Title 'Log Directory' -Value "$($EnvILTSILT.LOGDirectory)"
+                        New-AdaptiveFact -Title 'FileSuffix' -Value "$($EnvILTSILT.Suffix)"
+
+
+                    } -Separator Medium
+                    New-AdaptiveTextBlock -Text "File List" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Spacing None -Separator Default
+                        New-AdaptiveTable -DataTable $Files -Size Small -Spacing None -HeaderColor Good
+
+
+                }
+                New-AdaptiveAction -Title "Accounts" -Body {
+
+                    New-AdaptiveTextBlock -Text "Account Summary" -Weight Bolder -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveLineBreak
+                    foreach ($Account in $AccountsAppliedTraveller) {
+
+                        New-AdaptiveRichTextBlock -Text "$Account" -Weight Lighter -Spacing None
+
+                    }
+
+                }
+            }
         }
 
     }
