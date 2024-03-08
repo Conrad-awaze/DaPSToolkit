@@ -991,10 +991,13 @@ function Reset-DaPSSDLCEnvironment {
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                              START ENVIRONMENT REFRESH                                                             #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #region Environment Refresh Start
 
     Start-MyTimer -Name $TimerEnvironmentRefresh
     Write-DaPSLogEvent "*************$Database Environment Refresh Started*************"  @Logging
-
+    
+    #endregion
+    
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                            CHECK AND REMOVE REPLICATION                                                            #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
@@ -1048,10 +1051,13 @@ function Reset-DaPSSDLCEnvironment {
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                         CHECK AND REMOVE DATABASE SNAPSHOTS                                                        #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #region Database Snapshots
 
     $SnapshotCheckResults = Remove-DaPSDatabaseSnapshot  $SQLInstance $Database
     Write-DaPSLogEvent $SnapshotCheckResults @Logging
-
+    
+    #endregion
+    
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                              DISABLE OWNER PAYMENT JOB                                                             #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
@@ -1067,10 +1073,13 @@ function Reset-DaPSSDLCEnvironment {
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                                     DISABLE CDC                                                                    #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #region Disable CDC
 
     Invoke-DbaQuery -SqlInstance $SQLInstance -Database $Database -Query 'EXEC sys.sp_cdc_disable_db' -Verbose
     Write-DaPSLogEvent 'Disabled/Removed CDC jobs' @Logging
-
+    
+    #endregion
+    
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                          KILL CONNECTIONS TO ALL DATABASES                                                         #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
@@ -1114,9 +1123,10 @@ function Reset-DaPSSDLCEnvironment {
 
         Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -DenyLogin
         Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -Disable
+        Write-DaPSLogEvent  "SQL Account Disabled - [$_]" @Logging
     }
 
-    Write-DaPSLogEvent  "All Accounts Disabled" @Logging
+    Write-DaPSLogEvent  "All SQL Accounts Disabled" @Logging
 
     Get-DbaLogin -SqlInstance $SQLInstance | Where-Object {$_.Name -in $AccountsAccess}  | Select-Object Name, Hasaccess, IsDisabled
 
@@ -1737,12 +1747,12 @@ function Reset-DaPSSDLCEnvironment {
 
     #endregion
 
-    Start-Sleep 90
-
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                              MONITOR RESTORE PROGRESS                                                              #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #region Monitor Restore Progress
+
+    Start-Sleep 90
 
     $RefreshThreadJobCheck = {
 
@@ -1796,11 +1806,14 @@ function Reset-DaPSSDLCEnvironment {
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                      SET TRAVELLER DATABASE TO SIMPLE RECOVERY                                                     #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #region Set Traveller Database to Simple Recovery
 
     Set-DbaDbRecoveryModel -SqlInstance $SQLInstance -Database $Database -RecoveryModel Simple -Confirm:$false
     Write-DaPSLogEvent "$Database set to SIMPLE Recovery" @Logging
 
     Start-Sleep 5
+    
+    #endregion
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                                SHRINK SILT LOG FILES                                                               #
@@ -1861,10 +1874,13 @@ function Reset-DaPSSDLCEnvironment {
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                                     ENABLE CDC                                                                     #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #region Enable CDC
 
     Invoke-DbaQuery -SqlInstance $SQLInstance -Database $Database -Query 'EXECUTE sys.sp_cdc_enable_db' -Verbose
     Write-DaPSLogEvent "Enabled CDC in the $Database database" @Logging
-
+    
+    #endregion
+    
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                                 ENABLE CDC - TABLES                                                                #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
@@ -1989,8 +2005,8 @@ function Reset-DaPSSDLCEnvironment {
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #region Start Snapshot Agent Job
 
-    $SnapshotAgentJob = Get-DbaAgentJob -SqlInstance $SQLInstance -Category 'REPL-Snapshot' | Where-Object { $_.Name -match $Database } |
-                        Where-Object { $_.Name -match "$($Env.PublicationName)" } | Start-DbaAgentJob -Verbose
+    $SnapshotAgentJob = Get-DbaAgentJob -SqlInstance $($Env.SQLInstance) -Category 'REPL-Snapshot' | Where-Object { $_.Name -match $($Env.Database) } | Start-DbaAgentJob -Verbose
+                        #Where-Object { $_.Name -match "$($Env.TravellerPublicationILT)" } | Start-DbaAgentJob -Verbose
     Write-DaPSLogEvent "Snapshot Agent Started - [$($SnapshotAgentJob.Name)]" @Logging
 
     #endregion
@@ -2022,7 +2038,7 @@ function Reset-DaPSSDLCEnvironment {
 
     Start-Sleep 30
 
-    Get-DaPSReplicationStatus  $($Env.Server) $SQLInstance $Database $($Env.PublicationName) $($Env.ILTDatabaseSILT) $Logging
+    Get-DaPSReplicationStatus  $($Env.Server) $SQLInstance $($Env.Database) $($Env.TravellerPublicationILT) $($Env.ILTDatabaseSILT) $Logging
     Write-DaPSLogEvent "*************Replication Setup Completed*************" @Logging
 
     # ---------------------------------------- Teams Notification - Replication Setup Completed [Traveller Main] --------------------------------------- #
@@ -2061,6 +2077,7 @@ function Reset-DaPSSDLCEnvironment {
 
         Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -GrantLogin
         Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -Enable
+        Write-DaPSLogEvent  "SQL Account Enabled - [$_]" @Logging
     }
     Write-DaPSLogEvent  "All Accounts Enabled" @Logging
 
@@ -2088,7 +2105,7 @@ function Reset-DaPSSDLCEnvironment {
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #region Create View in the SILT Database
 
-    $VwGetFundingForDiscountAll = Find-DbaView -SqlInstance $SQLInstance -Pattern $Params.ILTView -Database $(v)
+    $VwGetFundingForDiscountAll = Find-DbaView -SqlInstance $SQLInstance -Pattern $Params.ILTView -Database $($EnvILTSILT.Database)
     if (!$VwGetFundingForDiscountAll) {
 
         Invoke-DbaQuery -SqlInstance $SQLInstance -File $ViewCreateScript -Database $($EnvILTSILT.Database) -Verbose
