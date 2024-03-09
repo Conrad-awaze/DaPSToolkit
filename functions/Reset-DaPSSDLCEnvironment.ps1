@@ -2004,11 +2004,11 @@ function Reset-DaPSSDLCEnvironment {
     #                                                              START SNAPSHOT AGENT JOB                                                              #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #region Start Snapshot Agent Job
-
-    $SnapshotAgentJob = Get-DbaAgentJob -SqlInstance $($Env.SQLInstance) -Category 'REPL-Snapshot' | Where-Object { $_.Name -match $($Env.Database) } | Start-DbaAgentJob -Verbose
-                        #Where-Object { $_.Name -match "$($Env.TravellerPublicationILT)" } | Start-DbaAgentJob -Verbose
+    start-sleep 3
+    $SnapshotAgentJob = Get-DbaAgentJob -SqlInstance $($Env.SQLInstance) -Category 'REPL-Snapshot' | Where-Object { $_.Name -match $($Env.Database) }  | Sort-Object -Property 'CreateDate' -Descending | 
+                        Where-Object { $_.Name -match $($Env.TravellerPublicationILT.Substring(0,20)) } | Select-Object -First 1 | Start-DbaAgentJob -Verbose
     Write-DaPSLogEvent "Snapshot Agent Started - [$($SnapshotAgentJob.Name)]" @Logging
-
+    
     #endregion
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
