@@ -2775,7 +2775,7 @@ function Reset-DaPSSDLCEnvironment {
 
                     } -Separator Medium
 
-                    New-AdaptiveTextBlock -Text "Replication" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    New-AdaptiveTextBlock -Text "Replication Publications" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
                     New-AdaptiveFactSet {
 
                         New-AdaptiveFact -Title 'Traveller Publication 1' -Value $Env.TravellerPublicationILT
@@ -2785,13 +2785,31 @@ function Reset-DaPSSDLCEnvironment {
 
                     } -Separator Medium
 
-                    New-AdaptiveTextBlock -Text "Traveller Restore Scripts" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Separator Default
+                    New-AdaptiveTextBlock -Text "Replication SQL Scripts" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    $ReplicationScripts = Get-ChildItem  $FolderReplicationScriptsSDLC
                     New-AdaptiveLineBreak
-                    New-AdaptiveTextBlock  -Text $($TravellerDatabaseRefresh.Script) -Wrap
+                    foreach ($Script in $ReplicationScripts.FullName) {
 
-                    New-AdaptiveTextBlock -Text "SILT Restore Script" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Separator Default
+                        New-AdaptiveRichTextBlock -Text "$Script" -Weight Lighter -Spacing None
+
+                    }
+
+                    New-AdaptiveTextBlock -Text "Traveller Config Scripts" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
+                    $ReplicationScripts = Get-ChildItem  $FolderReplicationScriptsSDLC
                     New-AdaptiveLineBreak
-                    New-AdaptiveTextBlock  -Text $($SILTDatabaseRefresh.Script) -Wrap
+                    foreach ($ScriptTravellerConfig in $TravellerConfigScripts.FullName) {
+
+                        New-AdaptiveRichTextBlock -Text "$ScriptTravellerConfig" -Weight Lighter -Spacing None
+
+                    }
+
+                    # New-AdaptiveTextBlock -Text "Traveller Restore Scripts" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Separator Default
+                    # New-AdaptiveLineBreak
+                    # New-AdaptiveTextBlock  -Text $($TravellerDatabaseRefresh.Script) -Wrap
+
+                    # New-AdaptiveTextBlock -Text "SILT Restore Script" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Separator Default
+                    # New-AdaptiveLineBreak
+                    # New-AdaptiveTextBlock  -Text $($SILTDatabaseRefresh.Script) -Wrap
 
                 }
                 New-AdaptiveAction -Title "Traveller Refresh Summary" -Body   {
@@ -2828,6 +2846,10 @@ function Reset-DaPSSDLCEnvironment {
 
                     } -Separator Medium
 
+                    New-AdaptiveTextBlock -Text "Traveller Restore Scripts" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Separator Default
+                    New-AdaptiveLineBreak
+                    New-AdaptiveTextBlock  -Text $($TravellerDatabaseRefresh.Script) -Wrap
+
 
                 }
                 New-AdaptiveAction -Title "SILT Refresh Summary" -Body   {
@@ -2851,7 +2873,11 @@ function Reset-DaPSSDLCEnvironment {
 
                     } -Separator Medium
                     New-AdaptiveTextBlock -Text "File List" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Spacing None -Separator Default
-                        New-AdaptiveTable -DataTable $Files -Size Small -Spacing None -HeaderColor Good
+                    New-AdaptiveTable -DataTable $Files -Size Small -Spacing None -HeaderColor Good
+
+                    New-AdaptiveTextBlock -Text "SILT Restore Script" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Separator Default
+                    New-AdaptiveLineBreak
+                    New-AdaptiveTextBlock  -Text $($SILTDatabaseRefresh.Script) -Wrap
 
 
                 }
