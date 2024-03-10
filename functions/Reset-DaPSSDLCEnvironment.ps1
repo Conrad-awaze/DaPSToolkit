@@ -2787,29 +2787,30 @@ function Reset-DaPSSDLCEnvironment {
 
                     New-AdaptiveTextBlock -Text "Replication SQL Scripts" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
                     $ReplicationScripts = Get-ChildItem  $FolderReplicationScriptsSDLC
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Scripts Folder' -Value $FolderReplicationScriptsSDLC
+                        
+                    } -Separator Medium
                     New-AdaptiveLineBreak
-                    foreach ($Script in $ReplicationScripts.FullName) {
+                    foreach ($Script in $ReplicationScripts.Name) {
 
                         New-AdaptiveRichTextBlock -Text "$Script" -Weight Lighter -Spacing None
 
                     }
 
                     New-AdaptiveTextBlock -Text "Traveller Config Scripts" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left
-                    $ReplicationScripts = Get-ChildItem  $FolderReplicationScriptsSDLC
+                    New-AdaptiveFactSet {
+
+                        New-AdaptiveFact -Title 'Scripts Folder' -Value "$($Env.TravellerConfigScripts)"
+                        
+                    } -Separator Medium
                     New-AdaptiveLineBreak
-                    foreach ($ScriptTravellerConfig in $TravellerConfigScripts.FullName) {
+                    foreach ($ScriptTravellerConfig in $TravellerConfigScripts.Name) {
 
                         New-AdaptiveRichTextBlock -Text "$ScriptTravellerConfig" -Weight Lighter -Spacing None
 
                     }
-
-                    # New-AdaptiveTextBlock -Text "Traveller Restore Scripts" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Separator Default
-                    # New-AdaptiveLineBreak
-                    # New-AdaptiveTextBlock  -Text $($TravellerDatabaseRefresh.Script) -Wrap
-
-                    # New-AdaptiveTextBlock -Text "SILT Restore Script" -Weight Default -Size Large -Color Accent -HorizontalAlignment Left -Separator Default
-                    # New-AdaptiveLineBreak
-                    # New-AdaptiveTextBlock  -Text $($SILTDatabaseRefresh.Script) -Wrap
 
                 }
                 New-AdaptiveAction -Title "Traveller Refresh Summary" -Body   {
