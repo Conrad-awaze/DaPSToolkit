@@ -48,6 +48,7 @@ function Reset-DaPSSDLCEnvironment {
 
     $IndexCreateScriptSupplierExtra = "$($Params.RefreshFilesFolder)\$($Params.'Script-IndexCreate-SupplierExtra')"
     $IndexCreateScript              = "$($Params.RefreshFilesFolder)\$($Params.'Script-IndexCreate')"
+    $AllILTIndexesScript            = "$($Params.RefreshFilesFolder)\$($Params.'Script-AllILTIndexes')"
     $ViewCreateScript               = "$($Params.RefreshFilesFolder)\$($Params.'Script-ViewCreate')"
     $IndexList                      = "$($Params.RefreshFilesFolder)\$($Params.IndexList)"
     $ILTView                        = "$($Params.RefreshFilesFolder)\$($Params.ILTView)"
@@ -1112,25 +1113,25 @@ function Reset-DaPSSDLCEnvironment {
 
     #endregion
 
-    # -------------------------------------------------------------------------------------------------------------------------------------------------- #
-    #                                                               DISABLE SQL/AD ACCOUNTS                                                              #
-    # -------------------------------------------------------------------------------------------------------------------------------------------------- #
-    #region Disable SQL/AD Accounts
+    # # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    # #                                                               DISABLE SQL/AD ACCOUNTS                                                              #
+    # # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    # #region Disable SQL/AD Accounts
 
-    $AccountsAccess = ($AllUserAccounts | Select-Object -Unique User | Where-Object {$_ -notmatch 'VRUKL'} ).User
+    # $AccountsAccess = ($AllUserAccounts | Select-Object -Unique User | Where-Object {$_ -notmatch 'VRUKL'} ).User
 
-    $AccountsAccess | ForEach-Object {
+    # $AccountsAccess | ForEach-Object {
 
-        Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -DenyLogin
-        Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -Disable
-        Write-DaPSLogEvent  "SQL Account Disabled - [$_]" @Logging
-    }
+    #     Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -DenyLogin
+    #     Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -Disable
+    #     Write-DaPSLogEvent  "SQL Account Disabled - [$_]" @Logging
+    # }
 
-    Write-DaPSLogEvent  "All SQL Accounts Disabled" @Logging
+    # Write-DaPSLogEvent  "All SQL Accounts Disabled" @Logging
 
-    Get-DbaLogin -SqlInstance $SQLInstance | Where-Object {$_.Name -in $AccountsAccess}  | Select-Object Name, Hasaccess, IsDisabled
+    # Get-DbaLogin -SqlInstance $SQLInstance | Where-Object {$_.Name -in $AccountsAccess}  | Select-Object Name, Hasaccess, IsDisabled
 
-    #endregion
+    # #endregion
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                          SETUP BACKUP FILES - LIVE\MASKED                                                          #
@@ -2124,35 +2125,50 @@ function Reset-DaPSSDLCEnvironment {
     #                                                    APPLY AND CHECK INDEXES IN THE SILT DATABASE                                                    #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #region Apply and Check Indexes in the SILT Database
-
+    
     Invoke-DbaQuery -SqlInstance $SQLInstance -File $IndexCreateScriptSupplierExtra -Database $($EnvILTSILT.Database) -Verbose -QueryTimeout ([int]::MaxValue)
     Write-DaPSLogEvent "[$($EnvILTSILT.Database)] Indexes applied to the database - Supplier Extras" @Logging
+    
+    Start-Sleep 2
+
+    $SILTIndexesBefore = Get-DbaHelpIndex -SqlInstance $SQLInstance -Database $($EnvILTSILT.Database) 
+    Write-DaPSLogEvent "SILT Index Count Before - $($SILTIndexesBefore.Count)" @Logging
+
+    start-sleep 2
+
+    # Invoke-DbaQuery -SqlInstance $SQLInstance -File $IndexCreateScript -Database $($EnvILTSILT.Database) -Verbose -QueryTimeout ([int]::MaxValue)
+    # Write-DaPSLogEvent "[$($EnvILTSILT.Database)] Indexes applied to the database" @Logging
+
+    # Start-Sleep 2
+
+    Invoke-DbaQuery -SqlInstance $SQLInstance -File $AllILTIndexesScript -Database $($EnvILTSILT.Database) -Verbose -QueryTimeout ([int]::MaxValue)
+    Write-DaPSLogEvent "[$($EnvILTSILT.Database)] All Indexes script applied to the database" @Logging
 
     Start-Sleep 2
 
-    Invoke-DbaQuery -SqlInstance $SQLInstance -File $IndexCreateScript -Database $($EnvILTSILT.Database) -Verbose -QueryTimeout ([int]::MaxValue)
-    Write-DaPSLogEvent "[$($EnvILTSILT.Database)] Indexes applied to the database" @Logging
+    $SILTIndexesAfter = Get-DbaHelpIndex -SqlInstance $SQLInstance -Database $($EnvILTSILT.Database) 
+    Write-DaPSLogEvent "SILT Index Count After - $($SILTIndexesAfter.Count)" @Logging
 
-    Start-Sleep 2
+    Write-DaPSLogEvent "[Index Check] - $($($SILTIndexesAfter.Count) - $($SILTIndexesBefore.Count) ) Indexes Added to the $($EnvILTSILT.Database) Database" @Logging
 
-    $Query = "select Name from sys.indexes As Name order by 1 asc"
-    $AllIndexes = (Invoke-DbaQuery -SqlInstance $SQLInstance -Database $($EnvILTSILT.Database) -Query $Query -As PSObject).Name
-    $ILT_Indexes = Get-Content -Path $IndexList
+    # $Query = "select Name from sys.indexes As Name order by 1 asc"
+    # $AllIndexes = (Invoke-DbaQuery -SqlInstance $SQLInstance -Database $($EnvILTSILT.Database) -Query $Query -As PSObject).Name
+    # $ILT_Indexes = Get-Content -Path $IndexList
 
-    foreach ($Index in $ILT_Indexes) {
+    # foreach ($Index in $ILT_Indexes) {
 
-        if ($AllIndexes.Contains($Index)) {
+    #     if ($AllIndexes.Contains($Index)) {
 
-            Write-DaPSLogEvent "Index check - Index present [$Index]" @Logging
+    #         Write-DaPSLogEvent "Index check - Index present [$Index]" @Logging
 
-        }
-        else {
+    #     }
+    #     else {
 
-            Write-DaPSLogEvent "Error - INDEX MISSING - [$Index]" @Logging
+    #         Write-DaPSLogEvent "Error - INDEX MISSING - [$Index]" @Logging
 
-        }
+    #     }
 
-    }
+    # }
 
     #endregion
 
@@ -2373,7 +2389,8 @@ function Reset-DaPSSDLCEnvironment {
         @backupdevicename = N'$($RestoreSummary.BackupFile)'
 
 "@
-    Invoke-DbaQuery -SqlInstance $SQLInstance -Database $Env.ILTDatabaseSILT -Query $InitializeFromBackup -ErrorAction Stop -QueryTimeout ([int]::MaxValue)  #-WarningAction Stop -WarningVariable InitializationWarning
+    Invoke-DbaQuery -SqlInstance $SQLInstance -Database $Env.ILTDatabaseSILT -Query $InitializeFromBackup -ErrorAction Stop -QueryTimeout ([int]::MaxValue) 
+
     Write-DaPSLogEvent "Initialized SILT Database to the ILT" @Logging
 
     #endregion
@@ -2383,15 +2400,9 @@ function Reset-DaPSSDLCEnvironment {
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #region Check Replication Status
 
-    start-sleep 20
-
-    $CurrentReplication = Get-DaPSCurrentReplicationSetup -SQLInstance $Env.Server
-    $Publications = $CurrentReplication | Where-Object {$_.publisher_db -eq $Database -or $_.publisher_db -eq  $($Env.ILTDatabaseSILT)}
-
-
     $ReplicationStatusScript = @"
 
-        SELECT TOP (1) [agent_id]
+        SELECT TOP (20) [agent_id]
         ,[runstatus]
         ,[time]
         ,creation_date
@@ -2405,27 +2416,53 @@ function Reset-DaPSSDLCEnvironment {
         ,current_delivery_latency
         ,delivered_commands
         ,delivered_transactions
-        --,*
         FROM [distribution].[dbo].[MSdistribution_history] MSDH
         join [distribution].[dbo].[MSdistribution_agents] MSDA on MSDH.agent_id = MSDA.id
         --join [distribution].[dbo].[MSrepl_errors] MSERR on MSDH.error_id = MSERR.id
-        where MSDA.publisher_db = '$($Env.ILTDatabaseSILT)'
+        where MSDA.publication = '$($Env.PublicationNameSILT)' and name like '%$($Env.Server)%'
         order by msdh.time desc
 
 "@
 
+    Write-DaPSLogEvent "[$($Env.PublicationNameSILT)] - Checking Replication Status.....!!!!!!" @Logging | Out-Null
+
+    Start-Sleep 30
+
     $repl = Invoke-DbaQuery -SqlInstance $SQLInstance -Database distribution -Query $ReplicationStatusScript -Verbose #-As PSObject
+    
+    $ReplStages = $repl | Sort-Object -Property time
 
-    switch ($repl.runstatus) {
-        2 { Write-DaPSLogEvent "[Replication Status]: Succeeded | Comments: $($repl.comments)" @Logging}
-        3 { Write-DaPSLogEvent "[Replication Status]: In progress | Comments: $($repl.comments)" @Logging}
-        4 { Write-DaPSLogEvent "[Replication Status]: Idle | Comments: $($repl.comments)" @Logging}
-        5 { Write-DaPSLogEvent "[Replication Status]: Retrying | Comments: $($repl.comments)" @Logging}
-        6 { Write-DaPSLogEvent "[Replication Status]: Failed | Comments: $($repl.comments)" @Logging}
+    foreach ($Stage in $ReplStages) {
 
+        switch ($Stage.runstatus) {
+            0 { $ReplicationStatus =  'Setup' }
+            1 { $ReplicationStatus =  'Started' }
+            2 { $ReplicationStatus =  'Succeeded' }
+            3 { $ReplicationStatus =  'In progress'}
+            4 { $ReplicationStatus =  'Idle'}
+            5 { $ReplicationStatus =  'Retrying'}
+            6 { $ReplicationStatus =  'Failed'}
+            default { $ReplicationStatus =  "$($Stage.runstatus)" }
+
+        }
+        Write-DaPSLogEvent "[$($Stage.publication)] - Status: $ReplicationStatus | Comments: $($Stage.comments)" @Logging | Out-Null
     }
 
+    Write-DaPSLogEvent "[$($Env.PublicationNameSILT)] - Initialization Complete........." @Logging 
+
     #endregion
+
+    # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #                                                        APPLY ALL INDEXES TO THE ILT DATABASE                                                       #
+    # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #region Apply All Indexes to the ILT Database
+
+    Invoke-DbaQuery -SqlInstance $SQLInstance -File $AllILTIndexesScript -Database $($Env.ILTDatabase) -Verbose -QueryTimeout ([int]::MaxValue) -ErrorAction Continue
+    Write-DaPSLogEvent "[$($Env.ILTDatabase)] All Indexes script applied to the database" @Logging
+    
+    #endregion
+
+    
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                              ENABLE OWNER PAYMENT JOB                                                              #
