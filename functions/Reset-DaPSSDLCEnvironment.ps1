@@ -1368,7 +1368,7 @@ function Reset-DaPSSDLCEnvironment {
 
     }
 
-    Start-ThreadJob @paramsThreadJobSILT # -StreamingHost $Host
+    Start-ThreadJob @paramsThreadJobSILT -StreamingHost $Host
 
     #endregion
 
@@ -1744,7 +1744,7 @@ function Reset-DaPSSDLCEnvironment {
 
     }
 
-    Start-ThreadJob @paramsThreadJob  #-StreamingHost $Host
+    Start-ThreadJob @paramsThreadJob -StreamingHost $Host
 
     #endregion
 
@@ -2125,21 +2125,16 @@ function Reset-DaPSSDLCEnvironment {
     #                                                    APPLY AND CHECK INDEXES IN THE SILT DATABASE                                                    #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #region Apply and Check Indexes in the SILT Database
+
+    $SILTIndexesBefore = Get-DbaHelpIndex -SqlInstance $SQLInstance -Database $($EnvILTSILT.Database) 
+    Write-DaPSLogEvent "[Index Check] - $($SILTIndexesBefore.Count) SILT Indexes Before Updates" @Logging
+
+    start-sleep 2
     
     Invoke-DbaQuery -SqlInstance $SQLInstance -File $IndexCreateScriptSupplierExtra -Database $($EnvILTSILT.Database) -Verbose -QueryTimeout ([int]::MaxValue)
     Write-DaPSLogEvent "[$($EnvILTSILT.Database)] Indexes applied to the database - Supplier Extras" @Logging
     
     Start-Sleep 2
-
-    $SILTIndexesBefore = Get-DbaHelpIndex -SqlInstance $SQLInstance -Database $($EnvILTSILT.Database) 
-    Write-DaPSLogEvent "SILT Index Count Before - $($SILTIndexesBefore.Count)" @Logging
-
-    start-sleep 2
-
-    # Invoke-DbaQuery -SqlInstance $SQLInstance -File $IndexCreateScript -Database $($EnvILTSILT.Database) -Verbose -QueryTimeout ([int]::MaxValue)
-    # Write-DaPSLogEvent "[$($EnvILTSILT.Database)] Indexes applied to the database" @Logging
-
-    # Start-Sleep 2
 
     Invoke-DbaQuery -SqlInstance $SQLInstance -File $AllILTIndexesScript -Database $($EnvILTSILT.Database) -Verbose -QueryTimeout ([int]::MaxValue)
     Write-DaPSLogEvent "[$($EnvILTSILT.Database)] All Indexes script applied to the database" @Logging
@@ -2147,28 +2142,9 @@ function Reset-DaPSSDLCEnvironment {
     Start-Sleep 2
 
     $SILTIndexesAfter = Get-DbaHelpIndex -SqlInstance $SQLInstance -Database $($EnvILTSILT.Database) 
-    Write-DaPSLogEvent "SILT Index Count After - $($SILTIndexesAfter.Count)" @Logging
+    Write-DaPSLogEvent "[Index Check] - $($SILTIndexesAfter.Count) SILT Indexes After Updates" @Logging
 
     Write-DaPSLogEvent "[Index Check] - $($($SILTIndexesAfter.Count) - $($SILTIndexesBefore.Count) ) Indexes Added to the $($EnvILTSILT.Database) Database" @Logging
-
-    # $Query = "select Name from sys.indexes As Name order by 1 asc"
-    # $AllIndexes = (Invoke-DbaQuery -SqlInstance $SQLInstance -Database $($EnvILTSILT.Database) -Query $Query -As PSObject).Name
-    # $ILT_Indexes = Get-Content -Path $IndexList
-
-    # foreach ($Index in $ILT_Indexes) {
-
-    #     if ($AllIndexes.Contains($Index)) {
-
-    #         Write-DaPSLogEvent "Index check - Index present [$Index]" @Logging
-
-    #     }
-    #     else {
-
-    #         Write-DaPSLogEvent "Error - INDEX MISSING - [$Index]" @Logging
-
-    #     }
-
-    # }
 
     #endregion
 
@@ -2453,16 +2429,43 @@ function Reset-DaPSSDLCEnvironment {
     #endregion
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #                                                    APPLY AND CHECK INDEXES IN THE ILT DATABASE                                                     #
+    # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #region Apply and Check Indexes in the ILT Database
+
+    start-sleep 2
+
+    $ILTIndexesBefore = Get-DbaHelpIndex -SqlInstance $SQLInstance -Database $($EnvILT.database) 
+    Write-DaPSLogEvent "[Index Check] - $($ILTIndexesBefore.Count) SILT Indexes Before Updates" @Logging
+
+    start-sleep 2
+    
+    # Invoke-DbaQuery -SqlInstance $SQLInstance -File $IndexCreateScriptSupplierExtra -Database $($EnvILT.database) -Verbose -QueryTimeout ([int]::MaxValue)
+    # Write-DaPSLogEvent "[$($EnvILTSILT.Database)] Indexes applied to the database - Supplier Extras" @Logging
+    
+    # Start-Sleep 2
+
+    Invoke-DbaQuery -SqlInstance $SQLInstance -File $AllILTIndexesScript -Database $($EnvILT.database) -Verbose -QueryTimeout ([int]::MaxValue)
+    Write-DaPSLogEvent "[$($EnvILT.database)] All Indexes script applied to the database" @Logging
+
+    Start-Sleep 2
+
+    $ILTIndexesAfter = Get-DbaHelpIndex -SqlInstance $SQLInstance -Database $($EnvILT.database) 
+    Write-DaPSLogEvent "[Index Check] - $($ILTIndexesAfter.Count) SILT Indexes After Updates" @Logging
+
+    Write-DaPSLogEvent "[Index Check] - $($($ILTIndexesAfter.Count) - $($ILTIndexesBefore.Count)) Indexes Added to the $($EnvILT.database) Database" @Logging
+
+    #endregion
+
+    # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                        APPLY ALL INDEXES TO THE ILT DATABASE                                                       #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #region Apply All Indexes to the ILT Database
 
-    Invoke-DbaQuery -SqlInstance $SQLInstance -File $AllILTIndexesScript -Database $($Env.ILTDatabase) -Verbose -QueryTimeout ([int]::MaxValue) -ErrorAction Continue
-    Write-DaPSLogEvent "[$($Env.ILTDatabase)] All Indexes script applied to the database" @Logging
+    # Invoke-DbaQuery -SqlInstance $SQLInstance -File $AllILTIndexesScript -Database $($Env.ILTDatabase) -Verbose -QueryTimeout ([int]::MaxValue) -ErrorAction Continue
+    # Write-DaPSLogEvent "[$($Env.ILTDatabase)] All Indexes script applied to the database" @Logging
     
     #endregion
-
-    
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                              ENABLE OWNER PAYMENT JOB                                                              #
