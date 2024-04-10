@@ -40,7 +40,7 @@ function Reset-DaPSSDLCDatabase {
     #endregion
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
-    #                                                             GET THE DATABASE PARAMATERS                                                            #
+    #                                                             GET THE DATABASE PARAMETERS                                                            #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #region GET THE DATABASE PARAMATERS
 
@@ -122,17 +122,17 @@ function Reset-DaPSSDLCDatabase {
         
                 }
 
-                Write-DaPSLogEvent "Collecting Backup File Details...!!!!" @Logging
+                Write-DaPSLogEvent "[Database Restore] [$Database] Collecting Backup File Details...!!!!" @Logging
         
                 $RefreshScript  = Restore-DbaDatabase @RestoreParameters -OutputScriptOnly
             
                 $BackupFiles    = ([regex]::Matches("$RefreshScript" , '\w+\.(bak|DIFF|trn)')).Value
                 $LatestLog      = $BackupFiles | Where-Object {$_ -match 'trn'} | Sort-Object -Descending | Select-Object -First 1
                 
-                Write-DaPSLogEvent "FULL Backup - $($BackupFiles | Where-Object {$_ -match 'bak'})" @Logging
-                Write-DaPSLogEvent "DIFF Backup - $($BackupFiles | Where-Object {$_ -match 'diff'})" @Logging
-                Write-DaPSLogEvent "Latest Log Backup - $LatestLog" @Logging
-                Write-DaPSLogEvent "Log Backup Count - $($BackupFiles.Count -2)" @Logging
+                Write-DaPSLogEvent "[Database Restore] [$Database] FULL Backup: $($BackupFiles | Where-Object {$_ -match 'bak'})" @Logging
+                Write-DaPSLogEvent "[Database Restore] [$Database] DIFF Backup: $($BackupFiles | Where-Object {$_ -match 'diff'})" @Logging
+                Write-DaPSLogEvent "[Database Restore] [$Database] Latest Log Backup: $LatestLog" @Logging
+                Write-DaPSLogEvent "[Database Restore] [$Database] Log Backup Count: $($BackupFiles.Count -2)" @Logging
 
              }
 
@@ -167,7 +167,7 @@ function Reset-DaPSSDLCDatabase {
 
         }
 
-        Write-DaPSLogEvent  "Collecting Backup File Details...!!!!" @Logging
+        Write-DaPSLogEvent  "[Database Restore] [$Database] Collecting Backup File Details...!!!!" @Logging
 
         try {
 
@@ -240,13 +240,13 @@ function Reset-DaPSSDLCDatabase {
         $BackupFiles    = ([regex]::Matches("$RefreshScript" , '\w+\.(bak|DIFF|trn)')).Value
         $LatestLog      = $BackupFiles | Where-Object {$_ -match 'trn'} | Sort-Object -Descending | Select-Object -First 1
         
-        Write-DaPSLogEvent "[FULL Backup]: $($BackupFiles | Where-Object {$_ -match 'bak'})" @Logging
+        Write-DaPSLogEvent "[Database Restore] [$Database] FULL Backup: $($BackupFiles | Where-Object {$_ -match 'bak'})" @Logging
 
         if (($BackupFiles | Measure-Object).Count -gt 1) {
             
-            Write-DaPSLogEvent "[DIFF Backup] - $($BackupFiles | Where-Object {$_ -match 'diff'})" @Logging
-            Write-DaPSLogEvent "[Latest Log Backup]: $LatestLog" @Logging
-            Write-DaPSLogEvent "[Log Backup Count]: $(($BackupFiles | Measure-Object).Count -2)" @Logging
+            Write-DaPSLogEvent "[Database Restore] [$Database] DIFF Backup: $($BackupFiles | Where-Object {$_ -match 'diff'})" @Logging
+            Write-DaPSLogEvent "[Database Restore] [$Database] Latest Log Backup: $LatestLog" @Logging
+            Write-DaPSLogEvent "[Database Restore] [$Database] Log Backup Count: $(($BackupFiles | Measure-Object).Count -2)" @Logging
         }
 
     }
@@ -369,11 +369,12 @@ function Reset-DaPSSDLCDatabase {
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #region DATABASE RESTORE
 
-    Write-DaPSLogEvent "*********************$($Database) - Database Refresh Started *********************" @Logging
+    Write-DaPSLogEvent "[Database Restore] [$Database] Restore Started" @Logging
 
     $RestoreSummary     = Restore-DbaDatabase @RestoreParameters
     $DurationRestore    = ($RestoreSummary  |  Sort-Object -Property BackupFile -Descending | Select-Object -First 1).DatabaseRestoreTime
-    Write-DaPSLogEvent "[$Database] Database Restore Completed: $DurationRestore" @Logging
+
+    Write-DaPSLogEvent "[Database Restore] [$Database] Restore Completed: $DurationRestore" @Logging
     
     #endregion
 
