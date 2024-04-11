@@ -5,7 +5,8 @@ function Reset-DaPSSDLCEnvironment {
         [string]$Database,
         [string]$ExcelfileFolder,
         [string]$ddbParametersTable,
-        [string]$ProfileNameCommon
+        [string]$ProfileNameCommon,
+        $PSDetail
 
     )
 
@@ -31,6 +32,20 @@ function Reset-DaPSSDLCEnvironment {
         LogStreamName   = "Environment Refresh - $Database - $(get-date -format "yyyy-MM-dd HH-mm-ss")"
         ProfileName     = $ProfileNameCommon
     }
+
+    # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #                                                        CHECK / CREATE LOGGROUP AND LOGSTREAM                                                       #
+    # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+
+    New-DaPSLogGroupLogStream $Logging.LogGroupName $Logging.LogStreamName $Logging.ProfileName
+    
+    Start-Sleep 2
+
+    Write-DaPSLogEvent "[PowerShell Details] [Script Run As]    : $($PSDetail.PSScriptRunAs)" @Logging
+    Write-DaPSLogEvent "[PowerShell Details] [Script Name]      : $($PSDetail.PSScriptFileName)" @Logging
+    Write-DaPSLogEvent "[PowerShell Details] [Script Location]  : $($PSDetail.PSScriptFileLocation)" @Logging
+    Write-DaPSLogEvent "[PowerShell Details] [PS Version]       : $($PSDetail.PSVersion)" @Logging
+    Write-DaPSLogEvent "[PowerShell Details] [OS]               : $($PSDetail.OS)" @Logging
 
     # ------------------------------------------------------------------ Refresh Files ----------------------------------------------------------------- #
     #region Refresh Files
@@ -80,29 +95,29 @@ function Reset-DaPSSDLCEnvironment {
     #                                                                      FUNCTIONS                                                                     #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #region Functions
-    function New-DaPSLogGroupLogStream {
-        param (
+    # function New-DaPSLogGroupLogStream {
+    #     param (
 
-            [string]$LogGroupName,
-            [string]$LogStreamName,
-            [string]$ProfileName
-        )
+    #         [string]$LogGroupName,
+    #         [string]$LogStreamName,
+    #         [string]$ProfileName
+    #     )
 
-        if (!(Get-CWLLogGroup -LogGroupNamePrefix $LogGroupName -ProfileName $ProfileName)) {
+    #     if (!(Get-CWLLogGroup -LogGroupNamePrefix $LogGroupName -ProfileName $ProfileName)) {
 
-            New-CWLLogGroup -LogGroupName $LogGroupName -ProfileName $ProfileName
-            Write-DaPSLogEvent "[AWS] LogGroup Created - [$($LogGroupName)]"
-            Start-Sleep 2
-        }
+    #         New-CWLLogGroup -LogGroupName $LogGroupName -ProfileName $ProfileName
+    #         Write-DaPSLogEvent "[AWS] LogGroup Created - [$($LogGroupName)]"
+    #         Start-Sleep 2
+    #     }
 
-        if (!(Get-CWLLogStream -LogGroupName $LogGroupName -LogStreamNamePrefix $LogStreamName -ProfileName $ProfileName)) {
+    #     if (!(Get-CWLLogStream -LogGroupName $LogGroupName -LogStreamNamePrefix $LogStreamName -ProfileName $ProfileName)) {
 
-            New-CWLLogStream -LogGroupName $LogGroupName -LogStreamName $LogStreamName -ProfileName $ProfileName
-            Write-DaPSLogEvent "[AWS] LogStream Created - [$LogStreamName]"
-            Start-Sleep 3
-        }
+    #         New-CWLLogStream -LogGroupName $LogGroupName -LogStreamName $LogStreamName -ProfileName $ProfileName
+    #         Write-DaPSLogEvent "[AWS] LogStream Created - [$LogStreamName]"
+    #         Start-Sleep 3
+    #     }
 
-    }
+    # }
     function Write-DaPSLogEvent {
 
         <#
@@ -862,7 +877,7 @@ function Reset-DaPSSDLCEnvironment {
     #                                                        CHECK / CREATE LOGGROUP AND LOGSTREAM                                                       #
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
 
-    New-DaPSLogGroupLogStream $Logging.LogGroupName $Logging.LogStreamName $Logging.ProfileName
+    # New-DaPSLogGroupLogStream $Logging.LogGroupName $Logging.LogStreamName $Logging.ProfileName
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                           CHECK AND CLEAN UP THREAD JOBS                                                           #
@@ -983,6 +998,19 @@ function Reset-DaPSSDLCEnvironment {
 
 
             } -Separator Medium
+        }
+        New-AdaptiveAction -Title "PS Details" -Body   {
+            New-AdaptiveTextBlock -Text "PowerShell Details" -Weight Bolder -Size Large -Color Good -HorizontalAlignment Left 
+            New-AdaptiveFactSet {
+                
+                New-AdaptiveFact -Title 'Script Run As' -Value $PSDetail.PSScriptRunAs
+                New-AdaptiveFact -Title 'PowerShell Script' -Value $PSDetail.PSScriptFileName
+                New-AdaptiveFact -Title 'Script Location' -Value $PSDetail.PSScriptFileLocation
+                New-AdaptiveFact -Title 'PowerShell Version' -Value $PSDetail.PSVersion
+                New-AdaptiveFact -Title 'Computer Name' -Value $PSDetail.COMPUTERNAME
+                New-AdaptiveFact -Title 'Operating System' -Value $PSDetail.OS
+                
+            } -Spacing Small 
         }
 
     }
@@ -2773,6 +2801,19 @@ function Reset-DaPSSDLCEnvironment {
                     }
 
                 }
+                New-AdaptiveAction -Title "PS Details" -Body   {
+                    New-AdaptiveTextBlock -Text "PowerShell Details" -Weight Bolder -Size Large -Color Good -HorizontalAlignment Left 
+                    New-AdaptiveFactSet {
+                        
+                        New-AdaptiveFact -Title 'Script Run As' -Value $PSDetail.PSScriptRunAs
+                        New-AdaptiveFact -Title 'PowerShell Script' -Value $PSDetail.PSScriptFileName
+                        New-AdaptiveFact -Title 'Script Location' -Value $PSDetail.PSScriptFileLocation
+                        New-AdaptiveFact -Title 'PowerShell Version' -Value $PSDetail.PSVersion
+                        New-AdaptiveFact -Title 'Computer Name' -Value $PSDetail.COMPUTERNAME
+                        New-AdaptiveFact -Title 'Operating System' -Value $PSDetail.OS
+                        
+                    } -Spacing Small 
+                }
 
              }
             Masked {
@@ -2932,6 +2973,19 @@ function Reset-DaPSSDLCEnvironment {
 
                     }
 
+                }
+                New-AdaptiveAction -Title "PS Details" -Body   {
+                    New-AdaptiveTextBlock -Text "PowerShell Details" -Weight Bolder -Size Large -Color Good -HorizontalAlignment Left 
+                    New-AdaptiveFactSet {
+                        
+                        New-AdaptiveFact -Title 'Script Run As' -Value $PSDetail.PSScriptRunAs
+                        New-AdaptiveFact -Title 'PowerShell Script' -Value $PSDetail.PSScriptFileName
+                        New-AdaptiveFact -Title 'Script Location' -Value $PSDetail.PSScriptFileLocation
+                        New-AdaptiveFact -Title 'PowerShell Version' -Value $PSDetail.PSVersion
+                        New-AdaptiveFact -Title 'Computer Name' -Value $PSDetail.COMPUTERNAME
+                        New-AdaptiveFact -Title 'Operating System' -Value $PSDetail.OS
+                        
+                    } -Spacing Small 
                 }
             }
         }
