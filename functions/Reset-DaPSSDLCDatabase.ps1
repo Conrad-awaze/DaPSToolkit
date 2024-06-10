@@ -588,7 +588,7 @@ function Reset-DaPSSDLCDatabase {
                 
             } -Separator Medium
 
-            if ($ParametersRefresh.BackupType -eq 'Live') {
+            if ($SummaryDIFF) {
                 
                 New-AdaptiveTextBlock -Text "DIFF Backup" -Weight Bolder -Size Large -Color Accent -HorizontalAlignment Left
                 New-AdaptiveFactSet {

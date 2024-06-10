@@ -1141,25 +1141,25 @@ function Reset-DaPSSDLCEnvironment {
 
     #endregion
 
-    # # -------------------------------------------------------------------------------------------------------------------------------------------------- #
-    # #                                                               DISABLE SQL/AD ACCOUNTS                                                              #
-    # # -------------------------------------------------------------------------------------------------------------------------------------------------- #
-    # #region Disable SQL/AD Accounts
+    # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #                                                               DISABLE SQL/AD ACCOUNTS                                                              #
+    # -------------------------------------------------------------------------------------------------------------------------------------------------- #
+    #region Disable SQL/AD Accounts
 
-    # $AccountsAccess = ($AllUserAccounts | Select-Object -Unique User | Where-Object {$_ -notmatch 'VRUKL'} ).User
+    $AccountsAccess = ($AllUserAccounts | Select-Object -Unique User | Where-Object {$_ -notmatch 'VRUKL'} ).User
 
-    # $AccountsAccess | ForEach-Object {
+    $AccountsAccess | ForEach-Object {
 
-    #     Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -DenyLogin
-    #     Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -Disable
-    #     Write-DaPSLogEvent  "SQL Account Disabled - [$_]" @Logging
-    # }
+        Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -DenyLogin
+        Set-DbaLogin -SqlInstance $SQLInstance -Login $_ -Disable
+        Write-DaPSLogEvent  "SQL Account Disabled - [$_]" @Logging
+    }
 
-    # Write-DaPSLogEvent  "All SQL Accounts Disabled" @Logging
+    Write-DaPSLogEvent  "All SQL Accounts Disabled" @Logging
 
-    # Get-DbaLogin -SqlInstance $SQLInstance | Where-Object {$_.Name -in $AccountsAccess}  | Select-Object Name, Hasaccess, IsDisabled
+    Get-DbaLogin -SqlInstance $SQLInstance | Where-Object {$_.Name -in $AccountsAccess}  | Select-Object Name, Hasaccess, IsDisabled
 
-    # #endregion
+    #endregion
 
     # -------------------------------------------------------------------------------------------------------------------------------------------------- #
     #                                                          SETUP BACKUP FILES - LIVE\MASKED                                                          #
